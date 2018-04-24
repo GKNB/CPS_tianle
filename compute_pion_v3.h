@@ -20,7 +20,7 @@ struct computepion_v3
   typedef typename mf_Policies::ScalarComplexType ScalarComplexType;
   typedef A2AmesonField<mf_Policies,A2AvectorWfftw,A2AvectorVfftw> MesonFieldType;
 
-  std::array<std::string,2> pion_type{ {"1s","2s"} };
+  const std::array<std::string,2> pion_type{ {"1s","2s"} };
   template<typename PionMomentumPolicy>
   static void compute(fMatrix<ScalarComplexType> &into, MesonFieldMomentumContainer<mf_Policies> &mf_1s_con, MesonFieldMomentumContainer<mf_Policies> &mf_2s_con,
                       const PionMomentumPolicy &pion_mom, const int pidx, std::string src_type, std::string snk_type)

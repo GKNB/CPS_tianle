@@ -358,6 +358,23 @@ void read_pion_mesonfield(MesonFieldMomentumContainer<A2Apolicies> &store, const
   }
 }
 
+void read_2s_pion_mesonfield(MesonFieldMomentumContainer<A2Apolicies> &store, const StandardPionMomentaPolicy &pion_mom, 
+                          const int traj, const Parameters &params, const std::string &work_dir)
+{
+  const int Lt = GJP.Tnodes() * GJP.TnodeSites();
+  std::vector<A2AmesonField<A2Apolicies,A2AvectorWfftw,A2AvectorVfftw> > tmp(Lt);
+  for(int p=0;p<pion_mom.nMom();p++)
+  {   
+    std::ostringstream os; 
+    os << work_dir << "/traj_" << traj << "_pion_mf_mom" << pion_mom.getMesonMomentum(p).file_str() << "_hyd2s_rad" << params.jp.pion_rad << ".dat";
+    A2AmesonField<A2Apolicies,A2AvectorWfftw,A2AvectorVfftw>::read(os.str(), tmp);    
+    std::vector<A2AmesonField<A2Apolicies,A2AvectorWfftw,A2AvectorVfftw> > &stored = store.copyAdd(pion_mom.getMesonMomentum(p), tmp);
+#ifdef NODE_DISTRIBUTE_MESONFIELDS
+    nodeDistributeMany(1,&stored);
+#endif   
+  }
+}
+
 void read_sigma_mesonfield(MesonFieldMomentumPairContainer<A2Apolicies> &store, const StationarySigmaMomentaPolicy &sigma_mom,
                            const int traj, const Parameters &params, const std::string &work_dir)
 {
@@ -519,6 +536,36 @@ void computesigma2ptv2(MesonFieldMomentumContainer<A2Apolicies> &mf_ll_con, cons
   print_time("main","Sigma 2pt function v2",time);
 
   if(!UniqueID()) printf("Memory after sigma 2pt function v2 computation:\n");
+  printMem();
+}
+
+void computePion2pt_v3(MesonFieldMomentumPairContainer<A2Apolicies> &mf_1s_con, MesonFieldMomentumPairContainer<A2Apolicies> &mf_2s_con, 
+                       const StandardPionMomentaPolicy &pion_mom, const int conf, const Parameters &params, std::string src_type, std::string snk_type)
+{
+  const int nmom = pion_mom.nMom();
+  const int Lt = GJP.Tnodes() * GJP.TnodeSites();
+  if(!UniqueID()) printf("Doing computePion2pt_v3 with src_type: %s and snk_type: %s\n", src_type.c_str(), snk_type.c_str());
+  double time = -dclock();
+  for(int psrc = 0; psrc < nmom; psrc += 2)
+  {
+    if(!UniqueID()) printf("Starting pidx %d\n",p);
+    fMatrix<typename A2Apolicies::ScalarComplexType> pion(Lt,Lt);
+    computepion_v3<A2Apolicies>::compute(pion,mf_1s_con,mf_2s_con,pion_mom,psrc,src_type,snk_type);
+#define DAIQIAN_PION_PHASE_CONVENTION
+    std::ostringstream os; 
+    os << params.meas_arg.WorkDirectory << "/traj_" << conf << "_pioncorr_mom";
+#ifndef DAIQIAN_PION_PHASE_CONVENTION
+    os << pion_mom.getMesonMomentum(p).file_str();  
+#else
+    os << (-pion_mom.getMesonMomentum(p)).file_str();
+#endif
+    os << "_src_" << src_type << "_snk_" << snk_type;
+    os << "_v3";
+    pion.write(os.str());
+  }
+  time += dclock();
+  print_time("main","Pion 2pt function v3",time);
+  if(!UniqueID()) printf("Memory after Pion 2pt function v3 computation:\n");
   printMem();
 }
 
@@ -941,14 +988,19 @@ void doConfiguration(const int conf, Parameters &params, const CommandLineArgs &
   MesonFieldMomentumPairContainer<A2Apolicies> mf_sigma_con;
 
   //------------------------------Read pion and sigma mesonfield------------------------------------------
-  if(cmdline.do_comove_pipi || cmdline.do_pipisigma || cmdline.do_pipiv2)
+  if(cmdline.do_comove_pipi || cmdline.do_pipisigma || cmdline.do_pipiv2 || cmdline.do_pion2ptv3)
     read_pion_mesonfield(mf_ll_con, pion_mom, conf, params, params.meas_arg.WorkDirectory);
   if(cmdline.do_sigma || cmdline.do_pipisigma)
     read_sigma_mesonfield(mf_sigma_con, sigma_mom, conf, params, params.meas_arg.WorkDirectory);
+  if(cmdline.do_pion2ptv3)
+    read_2s_pion_mesonfield(mf_ll_con_2s, pion_mom, conf, params, params.meas_arg.WorkDirectory);
 
 
   //----------------------------Compute the pion and moving pion two-point function---------------------------------
   if(cmdline.do_pion2ptv2) computepion2ptv2(mf_ll_con, pion_mom, conf, params, cmdline.do_1s);
+  if(cmdline.do_pion2ptv3) computePion2pt_v3(mf_ll_con, mf_ll_con_2s, pion_mom, conf, params, std::string("1s"), std::string("1s"));
+  if(cmdline.do_pion2ptv3) computePion2pt_v3(mf_ll_con, mf_ll_con_2s, pion_mom, conf, params, std::string("1s"), std::string("2s"));
+  if(cmdline.do_pion2ptv3) computePion2pt_v3(mf_ll_con, mf_ll_con_2s, pion_mom, conf, params, std::string("2s"), std::string("2s"));
   if(cmdline.do_pion2ptcomovev2) compute_comove_pion2ptv2(mf_ll_con, pion_mom, conf, params, cmdline.do_1s);
 
   //----------------------------Compute the sigma two-point function and sigma/pipi matrix element---------------------------------
