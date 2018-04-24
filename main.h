@@ -117,11 +117,11 @@ struct CommandLineArgs{
     do_kaon2pt = false;
     do_pion2pt = false;
     do_pion2ptv2 = false;
-    do_pion2ptv3 = false;
+    do_pion2ptv3 = true;
     do_pion2ptcomovev2 = false;
     do_comove_pipi = false;
     do_pipi = false;
-    do_pipiv2 = true;
+    do_pipiv2 = false;
     do_ktopipi = false;
     do_sigma = false;
     do_pipisigma = false;
