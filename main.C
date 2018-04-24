@@ -11,6 +11,7 @@
 #include <alg/a2a/compute_ktopipi.h>
 #include "compute_comove_pion_v2.h"
 #include "compute_pion_v2.h"
+#include "compute_pion_v3.h"
 #include "compute_sigma_v2.h"
 #include "compute_sigma_v3.h"
 #include "compute_pipitosigma_v2.h"

@@ -20,37 +20,38 @@ struct computepion_v3
   typedef typename mf_Policies::ScalarComplexType ScalarComplexType;
   typedef A2AmesonField<mf_Policies,A2AvectorWfftw,A2AvectorVfftw> MesonFieldType;
 
-  const std::array<std::string,2> pion_type{ {"1s","2s"} };
   template<typename PionMomentumPolicy>
   static void compute(fMatrix<ScalarComplexType> &into, MesonFieldMomentumContainer<mf_Policies> &mf_1s_con, MesonFieldMomentumContainer<mf_Policies> &mf_2s_con,
                       const PionMomentumPolicy &pion_mom, const int pidx, std::string src_type, std::string snk_type)
   {
+    const std::array<std::string,2> pion_type{ {"1s","2s"} };
     int Lt = GJP.Tnodes()*GJP.TnodeSites();
     into.resize(Lt,Lt);
     into.zero();
 
+    MesonFieldMomentumContainer<mf_Policies> *mf_src_con_ptr, *mf_snk_con_ptr;
     if(src_type == pion_type[0])
-      MesonFieldMomentumContainer<mf_Policies> &mf_src_con = mf_1s_con;
+      mf_src_con_ptr = &mf_1s_con;
     else
     {
       assert(src_type == pion_type[1] && "Error: src_type can only be 1s or 2s\n");
-      MesonFieldMomentumContainer<mf_Policies> &mf_src_con = mf_2s_con;
+      mf_src_con_ptr = &mf_2s_con;
     }
     if(snk_type == pion_type[0])
-      MesonFieldMomentumContainer<mf_Policies> &mf_snk_con = mf_1s_con;
+      mf_snk_con_ptr = &mf_1s_con;
     else
     {
       assert(snk_type == pion_type[1] && "Error: snk_type can only be 1s or 2s\n");
-      MesonFieldMomentumContainer<mf_Policies> &mf_snk_con = mf_2s_con;
+      mf_snk_con_ptr = &mf_2s_con;
     }
 
     ThreeMomentum p_src = pion_mom.getMesonMomentum(pidx);
     ThreeMomentum p_snk = -p_src;
-    assert(mf_src_con.contains(p_src));
-    assert(mf_snk_con.contains(p_snk));
+    assert(mf_src_con_ptr->contains(p_src));
+    assert(mf_snk_con_ptr->contains(p_snk));
 
-    std::vector<MesonFieldType> &mf_pi_src = mf_src_con.get(p_src);
-    std::vector<MesonFieldType> &mf_pi_snk = mf_snk_con.get(p_snk);
+    std::vector<MesonFieldType> &mf_pi_src = mf_src_con_ptr->get(p_src);
+    std::vector<MesonFieldType> &mf_pi_snk = mf_snk_con_ptr->get(p_snk);
 
     int totwork = Lt * Lt;
     int start_pt, workpernode;

@@ -557,9 +557,9 @@ void computePion2pt_v3(MesonFieldMomentumPairContainer<A2Apolicies> &mf_1s_con, 
     std::ostringstream os; 
     os << params.meas_arg.WorkDirectory << "/traj_" << conf << "_pioncorr_mom";
 #ifndef DAIQIAN_PION_PHASE_CONVENTION
-    os << pion_mom.getMesonMomentum(p).file_str();  
+    os << pion_mom.getMesonMomentum(psrc).file_str();  
 #else
-    os << (-pion_mom.getMesonMomentum(p)).file_str();
+    os << (-pion_mom.getMesonMomentum(psrc)).file_str();
 #endif
     os << "_src_" << src_type << "_snk_" << snk_type;
     os << "_v3";
