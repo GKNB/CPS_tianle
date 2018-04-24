@@ -81,6 +81,7 @@ struct CommandLineArgs{
   bool do_kaon2pt;
   bool do_pion2pt;
   bool do_pion2ptv2;
+  bool do_pion2ptv3;
   bool do_pion2ptcomovev2;
   bool do_comove_pipi;
   bool do_pipi;
@@ -116,6 +117,7 @@ struct CommandLineArgs{
     do_kaon2pt = false;
     do_pion2pt = false;
     do_pion2ptv2 = false;
+    do_pion2ptv3 = false;
     do_pion2ptcomovev2 = false;
     do_comove_pipi = false;
     do_pipi = false;
