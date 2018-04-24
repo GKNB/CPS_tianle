@@ -346,6 +346,8 @@ void setupJob(int argc, char **argv, const Parameters &params, const CommandLine
 void read_pion_mesonfield(MesonFieldMomentumContainer<A2Apolicies> &store, const StandardPionMomentaPolicy &pion_mom, 
                           const int traj, const Parameters &params, const std::string &work_dir)
 {
+  if(!UniqueID()) printf("Start doing read_pion_mesonfield\n");
+  double time = -dclock();
   const int Lt = GJP.Tnodes() * GJP.TnodeSites();
   std::vector<A2AmesonField<A2Apolicies,A2AvectorWfftw,A2AvectorVfftw> > tmp(Lt);
   for(int p=0;p<pion_mom.nMom();p++)
@@ -358,11 +360,17 @@ void read_pion_mesonfield(MesonFieldMomentumContainer<A2Apolicies> &store, const
     nodeDistributeMany(1,&stored);
 #endif   
   }
+  time += dclock();
+  print_time("main","read_pion_mesonfield",time);
+  if(!UniqueID()) printf("Memory after read_pion_mesonfield:\n");
+  printMem();
 }
 
 void read_2s_pion_mesonfield(MesonFieldMomentumContainer<A2Apolicies> &store, const StandardPionMomentaPolicy &pion_mom, 
                           const int traj, const Parameters &params, const std::string &work_dir)
 {
+  if(!UniqueID()) printf("Start doing read_2s_pion_mesonfield\n");
+  double time = -dclock();
   const int Lt = GJP.Tnodes() * GJP.TnodeSites();
   std::vector<A2AmesonField<A2Apolicies,A2AvectorWfftw,A2AvectorVfftw> > tmp(Lt);
   for(int p=0;p<pion_mom.nMom();p++)
@@ -375,11 +383,17 @@ void read_2s_pion_mesonfield(MesonFieldMomentumContainer<A2Apolicies> &store, co
     nodeDistributeMany(1,&stored);
 #endif   
   }
+  time += dclock();
+  print_time("main","read_2s_pion_mesonfield",time);
+  if(!UniqueID()) printf("Memory after read_2s_pion_mesonfield:\n");
+  printMem();
 }
 
 void read_sigma_mesonfield(MesonFieldMomentumPairContainer<A2Apolicies> &store, const StationarySigmaMomentaPolicy &sigma_mom,
                            const int traj, const Parameters &params, const std::string &work_dir)
 {
+  if(!UniqueID()) printf("Start doing read_sigma_mesonfield\n");
+  double time = -dclock();
   const int Lt = GJP.Tnodes() * GJP.TnodeSites();
   std::vector<A2AmesonField<A2Apolicies,A2AvectorWfftw,A2AvectorVfftw> > tmp(Lt);
   for(int p=0;p<sigma_mom.nMom();p++)
@@ -392,6 +406,10 @@ void read_sigma_mesonfield(MesonFieldMomentumPairContainer<A2Apolicies> &store, 
     nodeDistributeMany(1,&stored);
 #endif
   }
+  time += dclock();
+  print_time("main","read_sigma_mesonfield",time);
+  if(!UniqueID()) printf("Memory after read_sigma_mesonfield:\n");
+  printMem();
 }
 
 void computepion2ptv2(MesonFieldMomentumContainer<A2Apolicies> &mf_ll_con, const StandardPionMomentaPolicy &pion_mom, const int conf, const Parameters &params, bool do_1s)
@@ -541,7 +559,7 @@ void computesigma2ptv2(MesonFieldMomentumContainer<A2Apolicies> &mf_ll_con, cons
   printMem();
 }
 
-void computePion2pt_v3(MesonFieldMomentumPairContainer<A2Apolicies> &mf_1s_con, MesonFieldMomentumPairContainer<A2Apolicies> &mf_2s_con, 
+void computePion2pt_v3(MesonFieldMomentumContainer<A2Apolicies> &mf_1s_con, MesonFieldMomentumContainer<A2Apolicies> &mf_2s_con, 
                        const StandardPionMomentaPolicy &pion_mom, const int conf, const Parameters &params, std::string src_type, std::string snk_type)
 {
   const int nmom = pion_mom.nMom();
@@ -550,7 +568,7 @@ void computePion2pt_v3(MesonFieldMomentumPairContainer<A2Apolicies> &mf_1s_con, 
   double time = -dclock();
   for(int psrc = 0; psrc < nmom; psrc += 2)
   {
-    if(!UniqueID()) printf("Starting pidx %d\n",p);
+    if(!UniqueID()) printf("Starting pidx %d\n",psrc);
     fMatrix<typename A2Apolicies::ScalarComplexType> pion(Lt,Lt);
     computepion_v3<A2Apolicies>::compute(pion,mf_1s_con,mf_2s_con,pion_mom,psrc,src_type,snk_type);
 #define DAIQIAN_PION_PHASE_CONVENTION
