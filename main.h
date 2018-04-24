@@ -117,11 +117,11 @@ struct CommandLineArgs{
     do_kaon2pt = false;
     do_pion2pt = false;
     do_pion2ptv2 = false;
-    do_pion2ptv3 = true;
+    do_pion2ptv3 = false;
     do_pion2ptcomovev2 = false;
     do_comove_pipi = false;
     do_pipi = false;
-    do_pipiv2 = false;
+    do_pipiv2 = true;
     do_ktopipi = false;
     do_sigma = false;
     do_pipisigma = false;
@@ -748,11 +748,12 @@ void computesigmapipiv2(MesonFieldMomentumContainer<A2Apolicies> &mf_ll_con, con
   printMem();
 }
 
-void computepipi2ptv2(MesonFieldMomentumContainer<A2Apolicies> &mf_pi_con, const StandardPionMomentaPolicy &pion_mom, const int conf, const Parameters &params)
+void computepipi2ptv2(MesonFieldMomentumContainer<A2Apolicies> &mf_1s_con, MesonFieldMomentumContainer<A2Apolicies> &mf_2s_con, 
+                      const StandardPionMomentaPolicy &pion_mom, const int conf, const Parameters &params, std::string src_type, std::string snk_type)
 {
   const int nmom = pion_mom.nMom();
   const int Lt = GJP.Tnodes() * GJP.TnodeSites();
-  if(!UniqueID()) printf("Computing pipi2ptv2 function\n");
+  if(!UniqueID()) printf("Computing pipi2ptv2 function with src_type %s and snk_type %s\n", src_type.c_str(), snk_type.c_str());
   double time = -dclock();
 
   for(int psrc=0; psrc < nmom; psrc++)
@@ -763,7 +764,7 @@ void computepipi2ptv2(MesonFieldMomentumContainer<A2Apolicies> &mf_pi_con, const
       ThreeMomentum p_pi1_snk = pion_mom.getMesonMomentum(psnk);
       std::array<fMatrix<typename A2Apolicies::ScalarComplexType>,3> pipi;
       if(!UniqueID()){ printf("Doing pipi2ptv2, psrc=%d psnk=%d\n",psrc,psnk); fflush(stdout); }
-      computepipi_v2<A2Apolicies>::compute_v2(pipi, mf_pi_con, pion_mom, psrc, psnk, params.jp.pipi_separation, params.jp.tstep_pipi);
+      computepipi_v2<A2Apolicies>::compute_v2(pipi, mf_1s_con, mf_2s_con, pion_mom, psrc, psnk, params.jp.pipi_separation, params.jp.tstep_pipi, src_type, snk_type);
       char diag[3] = {'C', 'D', 'R'};
       for(int i=0; i<3; i++)
       {
@@ -774,24 +775,29 @@ void computepipi2ptv2(MesonFieldMomentumContainer<A2Apolicies> &mf_pi_con, const
 #else
         os << "_mom" << (-p_pi1_src).file_str(2) << "_mom" << (-p_pi1_snk).file_str(2);
 #endif
-//        os << "_v2";
+	os << "_src_" << src_type << "_snk_" << snk_type;
+	os << "_v2";
         pipi[i].write(os.str());
         os.str("");
       }
     }
-    if(!UniqueID()){ printf("Doing pipi2ptVdis, pidx=%d\n",psrc); fflush(stdout); }
-    fVector<typename A2Apolicies::ScalarComplexType> pipi;
-    computepipi_v2<A2Apolicies>::compute_Vdis_v2(pipi, mf_pi_con, pion_mom, psrc, params.jp.pipi_separation);
-    std::ostringstream os;
-    os << params.meas_arg.WorkDirectory << "/traj_" << conf << "_FigureVdis_sep" << params.jp.pipi_separation;
+    if(src_type == snk_type)
+    {
+      if(!UniqueID()){ printf("Doing pipi2ptVdis, pidx=%d\n",psrc); fflush(stdout); }
+      fVector<typename A2Apolicies::ScalarComplexType> pipi;
+      computepipi_v2<A2Apolicies>::compute_Vdis_v2(pipi, mf_1s_con, mf_2s_con, pion_mom, psrc, params.jp.pipi_separation, src_type);
+      std::ostringstream os;
+      os << params.meas_arg.WorkDirectory << "/traj_" << conf << "_FigureVdis_sep" << params.jp.pipi_separation;
 #ifndef DAIQIAN_PION_PHASE_CONVENTION
-    os << "_mom" << p_pi1_src.file_str(2);
+      os << "_mom" << p_pi1_src.file_str(2);
 #else
-    os << "_mom" << (-p_pi1_src).file_str(2);
+      os << "_mom" << (-p_pi1_src).file_str(2);
 #endif
-//    os << "_v2";
-    pipi.write(os.str());
-    os.str("");
+      os << "_src_" << src_type;
+      os << "_v2";
+      pipi.write(os.str());
+      os.str("");
+    }
   }
   time += dclock();
   print_time("main","pipi2pt_v2",time);
@@ -1012,7 +1018,7 @@ void doConfiguration(const int conf, Parameters &params, const CommandLineArgs &
     read_pion_mesonfield(mf_ll_con, pion_mom, conf, params, params.meas_arg.WorkDirectory);
   if(cmdline.do_sigma || cmdline.do_pipisigma)
     read_sigma_mesonfield(mf_sigma_con, sigma_mom, conf, params, params.meas_arg.WorkDirectory);
-  if(cmdline.do_pion2ptv3)
+  if(cmdline.do_pion2ptv3 || cmdline.do_pipiv2)
     read_2s_pion_mesonfield(mf_ll_con_2s, pion_mom, conf, params, params.meas_arg.WorkDirectory);
 
 
@@ -1037,7 +1043,9 @@ void doConfiguration(const int conf, Parameters &params, const CommandLineArgs &
 //  if(cmdline.do_sigmapipi) computesigmapipiv2(mf_ll_con, pion_mom, sigma_mom, conf, params);
   
   //------------------------------I=0 and I=2 pipi and moving pipi two-point function---------------------------------
-  if(cmdline.do_pipiv2)  computepipi2ptv2(mf_ll_con, pion_mom, conf, params);
+  if(cmdline.do_pipiv2) computepipi2ptv2(mf_ll_con, mf_ll_con_2s, pion_mom, conf, params, std::string("1s"), std::string("1s"));
+  if(cmdline.do_pipiv2) computepipi2ptv2(mf_ll_con, mf_ll_con_2s, pion_mom, conf, params, std::string("1s"), std::string("2s"));
+  if(cmdline.do_pipiv2) computepipi2ptv2(mf_ll_con, mf_ll_con_2s, pion_mom, conf, params, std::string("2s"), std::string("2s"));
 
   if(cmdline.do_comove_pipi)
   { 

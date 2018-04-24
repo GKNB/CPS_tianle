@@ -23,20 +23,30 @@ class computepipi_v2
 
     //here into is a vector
     template<typename PionMomentumPolicy>
-    static void compute_Vdis_v2(fVector<ScalarComplexType> &into, MesonFieldMomentumContainer<mf_Policies> &mf_pi_con,
-                                const PionMomentumPolicy &pion_mom, const int psnk, const int tsep)
+    static void compute_Vdis_v2(fVector<ScalarComplexType> &into, MesonFieldMomentumContainer<mf_Policies> &mf_1s_con, MesonFieldMomentumContainer<mf_Policies> &mf_2s_con,
+                                const PionMomentumPolicy &pion_mom, const int psnk, const int tsep, std::string mf_type)
     {
+      const std::array<std::string,2> pion_type{ {"1s","2s"} };
       int Lt = GJP.Tnodes()*GJP.TnodeSites();
       into.resize(Lt);
       into.zero();
 
+      MesonFieldMomentumContainer<mf_Policies> *mf_con_ptr;
+      if(mf_type == pion_type[0])
+        mf_con_ptr = &mf_1s_con;
+      else
+      {   
+        assert(mf_type == pion_type[1] && "Error: mf_type can only be 1s or 2s\n");
+        mf_con_ptr = &mf_2s_con;
+      }
+
       ThreeMomentum p_snk = pion_mom.getMesonMomentum(psnk);
       ThreeMomentum p_src = -p_snk;
-      assert(mf_pi_con.contains(p_src));
-      assert(mf_pi_con.contains(p_snk));
+      assert(mf_con_ptr->contains(p_src));
+      assert(mf_con_ptr->contains(p_snk));
 
-      std::vector<MesonFieldType> &mf_pi_src = mf_pi_con.get(p_src);
-      std::vector<MesonFieldType> &mf_pi_snk = mf_pi_con.get(p_snk);
+      std::vector<MesonFieldType> &mf_pi_src = mf_con_ptr->get(p_src);
+      std::vector<MesonFieldType> &mf_pi_snk = mf_con_ptr->get(p_snk);
 #ifdef NODE_DISTRIBUTE_MESONFIELDS
       nodeGetMany(2,&mf_pi_src,&mf_pi_snk);
       cps::sync();
@@ -64,10 +74,11 @@ class computepipi_v2
 
     //tsep is b/w two pion, into is an array of 3 matrix, they are C,D,R diagram
     template<typename PionMomentumPolicy>
-    static void compute_v2(std::array<fMatrix<ScalarComplexType>,3> &into, MesonFieldMomentumContainer<mf_Policies> &mf_pi_con, 
-                           const PionMomentumPolicy &pion_mom, const int psrc, const int psnk, 
-                           const int tsep, const int tstep_src)
+    static void compute_v2(std::array<fMatrix<ScalarComplexType>,3> &into, MesonFieldMomentumContainer<mf_Policies> &mf_1s_con, 
+                           MesonFieldMomentumContainer<mf_Policies> &mf_2s_con, const PionMomentumPolicy &pion_mom, const int psrc, 
+			   const int psnk, const int tsep, const int tstep_src, std::string src_type, std::string snk_type)
     {
+      const std::array<std::string,2> pion_type{ {"1s","2s"} };
       int Lt = GJP.Tnodes()*GJP.TnodeSites();
       for(int i=0; i<3; i++)
       {
@@ -76,15 +87,31 @@ class computepipi_v2
       }
       if(Lt % tstep_src != 0) {assert( 0 && "Lt has to be an integer times tstep_src");}
 
+      MesonFieldMomentumContainer<mf_Policies> *mf_src_con_ptr, *mf_snk_con_ptr;
+      if(src_type == pion_type[0])
+        mf_src_con_ptr = &mf_1s_con;
+      else
+      {   
+        assert(src_type == pion_type[1] && "Error: src_type can only be 1s or 2s\n");
+        mf_src_con_ptr = &mf_2s_con;
+      }   
+      if(snk_type == pion_type[0])
+        mf_snk_con_ptr = &mf_1s_con;
+      else
+      {   
+        assert(snk_type == pion_type[1] && "Error: snk_type can only be 1s or 2s\n");
+        mf_snk_con_ptr = &mf_2s_con;
+      }
+
       ThreeMomentum p_src1 = pion_mom.getMesonMomentum(psrc);
       ThreeMomentum p_src2 = -p_src1;
       ThreeMomentum p_snk1 = pion_mom.getMesonMomentum(psnk);
       ThreeMomentum p_snk2 = -p_snk1;
 
-      assert(mf_pi_con.contains(p_src1));
-      assert(mf_pi_con.contains(p_src2));
-      assert(mf_pi_con.contains(p_snk1));
-      assert(mf_pi_con.contains(p_snk2));
+      assert(mf_src_con_ptr->contains(p_src1));
+      assert(mf_src_con_ptr->contains(p_src2));
+      assert(mf_snk_con_ptr->contains(p_snk1));
+      assert(mf_snk_con_ptr->contains(p_snk2));
 
       int totwork = Lt * Lt / tstep_src;
       int start_pt, workpernode;
@@ -95,10 +122,10 @@ class computepipi_v2
       int t1=0,t2=0,t3=0,t4=0;
       int tdis=0;
 
-      std::vector<MesonFieldType> &mf_pi_src1 = mf_pi_con.get(p_src1);
-      std::vector<MesonFieldType> &mf_pi_src2 = mf_pi_con.get(p_src2);
-      std::vector<MesonFieldType> &mf_pi_snk1 = mf_pi_con.get(p_snk1);
-      std::vector<MesonFieldType> &mf_pi_snk2 = mf_pi_con.get(p_snk2);
+      std::vector<MesonFieldType> &mf_pi_src1 = mf_src_con_ptr->get(p_src1);
+      std::vector<MesonFieldType> &mf_pi_src2 = mf_src_con_ptr->get(p_src2);
+      std::vector<MesonFieldType> &mf_pi_snk1 = mf_snk_con_ptr->get(p_snk1);
+      std::vector<MesonFieldType> &mf_pi_snk2 = mf_snk_con_ptr->get(p_snk2);
 #ifdef NODE_DISTRIBUTE_MESONFIELDS
       nodeGetMany(4,&mf_pi_src1,&mf_pi_src2,&mf_pi_snk1,&mf_pi_snk2);
       cps::sync();
